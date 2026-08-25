@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: postgresql
+    chart: task-manager
+spec:
+  type: ClusterIP
+  selector:
+    app: postgresql
+  ports:
+    - name: postgresql
+      protocol: TCP
+      port: {{ .Values.postgresql.service.port }}
+      targetPort: 5432

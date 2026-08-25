@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: task-service
+    chart: task-manager
+spec:
+  replicaCount: {{ .Values.task-service.replicaCount }}
+  selector:
+    matchLabels:
+      app: task-service
+  template:
+    metadata:
+      labels:
+        app: task-service
+    spec:
+      containers:
+        - name: task-service
+          image: "{{ .Values.repositories.acr }}/{{ .Values.task-service.image.repository }}:{{ .Values.task-service.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.task-service.port }}
+              name: http
+          env:
+            - name: DATABASE_URL
+              value: "{{ .Values.task-service.env.DATABASE_URL }}"
+            - name: PORT
+              value: "{{ .Values.task-service.env.PORT }}"
+          probes:
+            livenessProbe:
+              httpGet:
+                path: {{ .Values.task-service.healthCheckPath }}
+                port: http
+              initialDelaySeconds: 15
+              periodSeconds: 30
+            readinessProbe:
+              httpGet:
+                path: {{ .Values.task-service.healthCheckPath }}
+                port: http
+              initialDelaySeconds: 5
+              periodSeconds: 10
+          resources:
+            {{- toYaml .Values.task-service.resources | nindent 12 }}

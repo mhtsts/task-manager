@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task-manager-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: task-manager
+    chart: task-manager
+data:
+  DATABASE_URL: "{{ .Values.task-service.env.DATABASE_URL }}"
+  VITE_API_BASE: "{{ .Values.frontend.env.VITE_API_BASE }}"
+  TASK_SERVICE_URL: "{{ .Values.notification-service.env.TASK_SERVICE_URL }}"

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: notification-service
+    chart: task-manager
+spec:
+  replicaCount: {{ .Values.notification-service.replicaCount }}
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: "{{ .Values.repositories.acr }}/{{ .Values.notification-service.image.repository }}:{{ .Values.notification-service.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.notification-service.port }}
+              name: http
+          env:
+            - name: TASK_SERVICE_URL
+              value: "{{ .Values.notification-service.env.TASK_SERVICE_URL }}"
+            - name: PORT
+              value: "{{ .Values.notification-service.env.PORT }}"
+          probes:
+            livenessProbe:
+              httpGet:
+                path: {{ .Values.notification-service.healthCheckPath }}
+                port: http
+              initialDelaySeconds: 15
+              periodSeconds: 30
+            readinessProbe:
+              httpGet:
+                path: {{ .Values.notification-service.healthCheckPath }}
+                port: http
+              initialDelaySeconds: 5
+              periodSeconds: 10
+          resources:
+            {{- toYaml .Values.notification-service.resources | nindent 12 }}

@@ -1,0 +1,97 @@
+global:
+  namespace: task-manager
+
+repositories:
+  acr:
+    name: myacr
+    url: myacr.azurecr.io
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: myacr.azurecr.io/task-manager/frontend
+    tag: "1.0.0"
+  port: 80
+  env:
+    VITE_API_BASE: http://task-service:8080
+
+task-service:
+  replicaCount: 1
+  image:
+    repository: myacr.azurecr.io/task-manager/task-service
+    tag: "1.0.0"
+  port: 8080
+  healthCheckPath: /health
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  env:
+    DATABASE_URL: postgresql://postgres:postgres@postgresql-0.task-manager-db.task-manager.svc.cluster.local:5432/tasksdb
+    PORT: 8080
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: postgres
+  primary:
+    architecture: standalone
+    postgresql:
+      enabled: true
+      image:
+        repository: postgres
+        tag: "15-alpine"
+        pullPolicy: IfNotPresent
+      auth:
+        postgresPassword: postgres
+        existingSecret: ""
+      primaryServiceName: postgresql-0
+    existingPostgresql: ""
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+      storageClassName: standard
+  service:
+    port: 5432
+
+notification-service:
+  replicaCount: 1
+  image:
+    repository: myacr.azurecr.io/task-manager/notification-service
+    tag: "1.0.0"
+  port: 8081
+  healthCheckPath: /health
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  env:
+    TASK_SERVICE_URL: http://task-service:8080
+    PORT: 8081
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  }
+  tls: []
+  host: task-manager.local
+  rules:
+    - host: task-manager.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+          - path: /api
+            pathType: Prefix
+            backend:
+              serviceName: frontend
+              servicePort: 80
