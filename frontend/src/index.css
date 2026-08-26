@@ -1,12 +1,12 @@
 :root {
-  --bg: #f6f7f9;
-  --card: #ffffff;
-  --text: #1a1d23;
+  --bg: #bebebe;
+  --card: #f7ffe0d0;
+  --text: #151921;
   --muted: #6b7280;
-  --border: #e5e7eb;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --danger: #dc2626;
+  --border: #95b6f7;
+  --primary: #46eb25;
+  --primary-hover: #33d81d;
+  --danger: #eb3b3b;
   --radius: 12px;
   --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
   font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
