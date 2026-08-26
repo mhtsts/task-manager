@@ -130,7 +130,7 @@ jobs:
           labels: ${{ steps.notification-meta.outputs.labels }}
 
   deploy:
-    name: Deploy to local Kubernetes
+    name: Deploy with Docker Compose
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: publish
     runs-on: [self-hosted, macOS, X64]
@@ -138,11 +138,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-
-      - name: Check Kubernetes connection
-        run: |
-          kubectl config current-context
-          kubectl get nodes
 
       - name: Select published image tag
         id: image-tag
@@ -153,35 +148,31 @@ jobs:
             echo "tag=sha-${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Apply Kubernetes resources
-        run: |
-          kubectl apply -f infrastructure/kind/namespace.yaml
-          kubectl apply -f infrastructure/kind/postgresql.yaml
-          kubectl apply -f infrastructure/kind/task-service.yaml
-          kubectl apply -f infrastructure/kind/notification-service.yaml
-          kubectl apply -f infrastructure/kind/frontend.yaml
-          kubectl apply -f infrastructure/kind/ingress.yaml
-
-      - name: Update deployments to published images
+      - name: Pull published images
         env:
           IMAGE_TAG: ${{ steps.image-tag.outputs.tag }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          kubectl -n task-manager set image deployment/frontend \
-            frontend="$DOCKERHUB_USERNAME/task-manager-frontend:$IMAGE_TAG"
-          kubectl -n task-manager set image deployment/task-service \
-            task-service="$DOCKERHUB_USERNAME/task-manager-task-service:$IMAGE_TAG"
-          kubectl -n task-manager set image deployment/notification-service \
-            notification-service="$DOCKERHUB_USERNAME/task-manager-notification-service:$IMAGE_TAG"
+          docker compose pull db task-service notification-service frontend
 
-          for deployment in frontend task-service notification-service; do
-            kubectl -n task-manager patch deployment "$deployment" --type='strategic' \
-              -p '{"spec":{"template":{"spec":{"containers":[{"name":"'"$deployment"'","imagePullPolicy":"Always"}]}}}}'
-          done
-
-      - name: Wait for deployment rollout
+      - name: Start published images
+        env:
+          IMAGE_TAG: ${{ steps.image-tag.outputs.tag }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          kubectl -n task-manager rollout status deployment/frontend --timeout=180s
-          kubectl -n task-manager rollout status deployment/task-service --timeout=180s
-          kubectl -n task-manager rollout status deployment/notification-service --timeout=180s
-          kubectl -n task-manager get pods
+          docker compose up -d --no-build --remove-orphans
+          docker compose ps
+
+      - name: Check application health
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:8080/health > /dev/null && \
+              curl --fail --silent http://localhost:3000/ > /dev/null; then
+              echo "Application is healthy"
+              exit 0
+            fi
+            echo "Waiting for services (attempt $attempt/30)..."
+            sleep 5
+          done
+          docker compose logs --no-color
+          exit 1
