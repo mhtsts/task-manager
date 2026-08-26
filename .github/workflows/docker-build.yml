@@ -160,6 +160,8 @@ jobs:
           IMAGE_TAG: ${{ steps.image-tag.outputs.tag }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
+          docker compose down --remove-orphans || true
+          docker rm -f tasks-db task-service notification-service frontend 2>/dev/null || true
           docker compose up -d --no-build --remove-orphans
           docker compose ps
 

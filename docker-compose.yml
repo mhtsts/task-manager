@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:15-alpine
-    container_name: tasks-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: tasksdb
@@ -22,7 +21,6 @@ services:
     build:
       context: ./services/task-service
       dockerfile: Dockerfile
-    container_name: task-service
     restart: unless-stopped
     depends_on:
       db:
@@ -44,7 +42,6 @@ services:
     build:
       context: ./services/notification-service
       dockerfile: Dockerfile
-    container_name: notification-service
     restart: unless-stopped
     depends_on:
       task-service:
@@ -68,7 +65,6 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE: ""
-    container_name: frontend
     restart: unless-stopped
     depends_on:
       task-service:
