@@ -14,8 +14,7 @@ permissions:
 jobs:
   validate:
     name: Validate application
-    runs-on: [self-hosted, macOS, X64] # self hosted runner on my work macbook. To work work with htis runner, i should keep active run.sh file from folder github-runner on my desktop. this note only for owner of this template project, not to miss 
-    # runs-on: ubuntu-latest #this is a github default runner
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
