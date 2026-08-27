@@ -152,20 +152,26 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.image-tag.outputs.tag }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          COMPOSE_PROJECT_NAME: task-manager
         run: |
+          docker compose config
           docker compose pull db task-service notification-service frontend
 
       - name: Start published images
         env:
           IMAGE_TAG: ${{ steps.image-tag.outputs.tag }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          COMPOSE_PROJECT_NAME: task-manager
         run: |
+          docker compose -p mini-task-manager down --remove-orphans || true
           docker compose down --remove-orphans || true
           docker rm -f tasks-db task-service notification-service frontend 2>/dev/null || true
           docker compose up -d --no-build --remove-orphans
           docker compose ps
 
       - name: Check application health
+        env:
+          COMPOSE_PROJECT_NAME: task-manager
         run: |
           for attempt in {1..30}; do
             if curl --fail --silent http://localhost:8080/health > /dev/null && \
