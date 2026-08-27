@@ -169,6 +169,18 @@ jobs:
           docker compose up -d --no-build --remove-orphans
           docker compose ps
 
+      - name: Initialize database schema
+        env:
+          COMPOSE_PROJECT_NAME: task-manager
+        run: |
+          until docker compose exec -T db pg_isready -U postgres -d tasksdb; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          docker compose exec -T db psql -U postgres -d tasksdb \
+            -v ON_ERROR_STOP=1 \
+            -f /docker-entrypoint-initdb.d/1-init-tasks-table.sql
+
       - name: Check application health
         env:
           COMPOSE_PROJECT_NAME: task-manager
