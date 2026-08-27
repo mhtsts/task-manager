@@ -1,4 +1,5 @@
 services:
+  # PostgreSQL database
   db:
     image: postgres:15-alpine
     restart: unless-stopped
@@ -6,29 +7,37 @@ services:
       POSTGRES_DB: tasksdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    # Persistent data and schema
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./infrastructure/sql:/docker-entrypoint-initdb.d:ro
+    # Database readiness
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d tasksdb"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Task API service
   task-service:
+    # Docker Hub image selected by CI/CD variables
     image: ${DOCKERHUB_USERNAME:-local}/task-manager-task-service:${IMAGE_TAG:-latest}
+    # Local development build
     build:
       context: ./services/task-service
       dockerfile: Dockerfile
     restart: unless-stopped
+    # Start after database
     depends_on:
       db:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/tasksdb
       PORT: 8080
+    # Host-to-container port
     ports:
       - "8080:8080"
+    # API readiness
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
@@ -36,20 +45,26 @@ services:
       start_period: 10s
       retries: 3
 
+  # Notification API service
   notification-service:
+    # Docker Hub image selected by CI/CD variables
     image: ${DOCKERHUB_USERNAME:-local}/task-manager-notification-service:${IMAGE_TAG:-latest}
+    # Local development build
     build:
       context: ./services/notification-service
       dockerfile: Dockerfile
     restart: unless-stopped
+    # Start after task API
     depends_on:
       task-service:
         condition: service_healthy
     environment:
       TASK_SERVICE_URL: http://task-service:8080
       PORT: 8081
+    # Host-to-container port
     ports:
       - "8081:8081"
+    # API readiness
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health"]
       interval: 30s
@@ -57,19 +72,25 @@ services:
       start_period: 10s
       retries: 3
 
+  # Frontend web service
   frontend:
+    # Docker Hub image selected by CI/CD variables
     image: ${DOCKERHUB_USERNAME:-local}/task-manager-frontend:${IMAGE_TAG:-latest}
+    # Local development build
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         VITE_API_BASE: ""
     restart: unless-stopped
+    # Start after task API
     depends_on:
       task-service:
         condition: service_healthy
+    # Host-to-container port
     ports:
       - "3000:80"
+    # Web readiness
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
@@ -77,5 +98,6 @@ services:
       start_period: 10s
       retries: 3
 
+# Named database volume
 volumes:
   db-data:
