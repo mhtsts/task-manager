@@ -3,7 +3,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm cache clean --force \
+  && npm ci --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=120000
 
 COPY tsconfig.json .
 COPY src ./src
@@ -17,7 +18,8 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY package.json ./
 
-RUN npm install --only=production
+RUN npm cache clean --force \
+  && npm install --only=production --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=120000
 
 ENV NODE_ENV=production
 ENV PORT=8080
