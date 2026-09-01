@@ -221,7 +221,7 @@ jobs:
         run: |
           for attempt in {1..30}; do
             if curl --fail --silent http://localhost:8080/health > /dev/null && \
-              curl --fail --silent http://localhost:3000/ > /dev/null; then
+              curl --fail --silent http://localhost:80/ > /dev/null; then
               echo "Application is healthy"
               exit 0
             fi
